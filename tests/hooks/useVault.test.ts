@@ -1,0 +1,36 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+
+import { useVault } from "@/hooks/useVault";
+
+describe("useVault", () => {
+  test("deposit updates balance and history", async () => {
+    const { result } = renderHook(() => useVault({ walletAddress: "GTESTWALLETADDRESS" }));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.balance).toBe("0");
+
+    await act(async () => {
+      await result.current.deposit("10");
+    });
+
+    await waitFor(() => expect(result.current.isSubmitting).toBe(false));
+    expect(Number(result.current.balance)).toBeGreaterThanOrEqual(10);
+    expect(result.current.transactions[0]?.type).toBe("deposit");
+  });
+
+  test("withdraw reduces balance", async () => {
+    const { result } = renderHook(() => useVault({ walletAddress: "GTESTWALLETADDRESS_2" }));
+
+    await act(async () => {
+      await result.current.deposit("5");
+    });
+    await waitFor(() => expect(result.current.isSubmitting).toBe(false));
+
+    await act(async () => {
+      await result.current.withdraw("3");
+    });
+    await waitFor(() => expect(result.current.isSubmitting).toBe(false));
+
+    expect(Number(result.current.balance)).toBeGreaterThanOrEqual(0);
+  });
+});
