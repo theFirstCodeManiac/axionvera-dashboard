@@ -1,4 +1,5 @@
 import type { StellarNetwork } from "@/utils/networkConfig";
+import { withApiResilience, withErrorHandling, safeApiCall, ApiCallOptions } from "./apiResilience";
 
 export type VaultTxType = "deposit" | "withdraw" | "claim";
 
@@ -19,11 +20,11 @@ export type VaultBalances = {
 };
 
 export type AxionveraVaultSdk = {
-  getBalances: (args: { walletAddress: string; network: StellarNetwork }) => Promise<VaultBalances>;
-  getTransactions: (args: { walletAddress: string; network: StellarNetwork }) => Promise<VaultTx[]>;
-  deposit: (args: { walletAddress: string; network: StellarNetwork; amount: string }) => Promise<VaultTx>;
-  withdraw: (args: { walletAddress: string; network: StellarNetwork; amount: string }) => Promise<VaultTx>;
-  claimRewards: (args: { walletAddress: string; network: StellarNetwork }) => Promise<VaultTx>;
+  getBalances: (args: { walletAddress: string; network: StellarNetwork }, options?: ApiCallOptions) => Promise<VaultBalances>;
+  getTransactions: (args: { walletAddress: string; network: StellarNetwork }, options?: ApiCallOptions) => Promise<VaultTx[]>;
+  deposit: (args: { walletAddress: string; network: StellarNetwork; amount: string }, options?: ApiCallOptions) => Promise<VaultTx>;
+  withdraw: (args: { walletAddress: string; network: StellarNetwork; amount: string }, options?: ApiCallOptions) => Promise<VaultTx>;
+  claimRewards: (args: { walletAddress: string; network: StellarNetwork }, options?: ApiCallOptions) => Promise<VaultTx>;
 };
 
 export function shortenAddress(address: string, chars = 6) {
@@ -90,18 +91,19 @@ function toFixedString(n: number) {
 }
 
 export function createAxionveraVaultSdk(): AxionveraVaultSdk {
-  return {
-    async getBalances({ walletAddress, network }) {
+  // Base implementations without resilience
+  const baseSdk = {
+    async getBalances({ walletAddress, network }: { walletAddress: string; network: StellarNetwork }) {
       await sleep(150);
       const vault = loadVault(walletAddress, network);
       return { balance: vault.balance, rewards: vault.rewards };
     },
-    async getTransactions({ walletAddress, network }) {
+    async getTransactions({ walletAddress, network }: { walletAddress: string; network: StellarNetwork }) {
       await sleep(150);
       const vault = loadVault(walletAddress, network);
       return vault.txs;
     },
-    async deposit({ walletAddress, network, amount }) {
+    async deposit({ walletAddress, network, amount }: { walletAddress: string; network: StellarNetwork; amount: string }) {
       const tx: VaultTx = {
         id: createId(),
         type: "deposit",
@@ -127,7 +129,7 @@ export function createAxionveraVaultSdk(): AxionveraVaultSdk {
       saveVault(walletAddress, network, next);
       return completed;
     },
-    async withdraw({ walletAddress, network, amount }) {
+    async withdraw({ walletAddress, network, amount }: { walletAddress: string; network: StellarNetwork; amount: string }) {
       const tx: VaultTx = {
         id: createId(),
         type: "withdraw",
@@ -152,7 +154,7 @@ export function createAxionveraVaultSdk(): AxionveraVaultSdk {
       saveVault(walletAddress, network, next);
       return completed;
     },
-    async claimRewards({ walletAddress, network }) {
+    async claimRewards({ walletAddress, network }: { walletAddress: string; network: StellarNetwork }) {
       const vault = loadVault(walletAddress, network);
       const amount = vault.rewards;
       const tx: VaultTx = {
@@ -178,5 +180,29 @@ export function createAxionveraVaultSdk(): AxionveraVaultSdk {
       saveVault(walletAddress, network, next);
       return completed;
     }
+  };
+
+  // Wrap all methods with resilience and error handling
+  return {
+    getBalances: withErrorHandling(
+      withApiResilience(baseSdk.getBalances, { timeout: 5000, retries: 2 }),
+      'getBalances'
+    ),
+    getTransactions: withErrorHandling(
+      withApiResilience(baseSdk.getTransactions, { timeout: 5000, retries: 2 }),
+      'getTransactions'
+    ),
+    deposit: withErrorHandling(
+      withApiResilience(baseSdk.deposit, { timeout: 10000, retries: 1 }),
+      'deposit'
+    ),
+    withdraw: withErrorHandling(
+      withApiResilience(baseSdk.withdraw, { timeout: 10000, retries: 1 }),
+      'withdraw'
+    ),
+    claimRewards: withErrorHandling(
+      withApiResilience(baseSdk.claimRewards, { timeout: 10000, retries: 1 }),
+      'claimRewards'
+    )
   };
 }
