@@ -1,6 +1,7 @@
 import { FormInput } from './FormInput';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { withdrawSchema, WithdrawFormData } from '@/utils/validation';
+import { notify } from '@/utils/notifications';
 
 type WithdrawFormProps = {
   isConnected: boolean;
@@ -23,6 +24,7 @@ export default function WithdrawForm({ isConnected, isSubmitting, onWithdraw }: 
     initialValues,
     onSubmit: async (data) => {
       await onWithdraw(data.amount);
+      notify.success("Withdrawal Successful", `You have withdrawn ${data.amount} tokens.`);
       reset();
     },
   });
@@ -30,9 +32,9 @@ export default function WithdrawForm({ isConnected, isSubmitting, onWithdraw }: 
   const amountProps = getFieldProps('amount');
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-950/30 p-6">
-      <div className="text-sm font-semibold text-white">Withdraw</div>
-      <div className="mt-1 text-xs text-slate-400">Withdraw tokens from the Axionvera vault.</div>
+    <section className="rounded-2xl border border-border-primary bg-background-primary/30 p-6">
+      <div className="text-sm font-semibold text-text-primary">Withdraw</div>
+      <div className="mt-1 text-xs text-text-muted">Withdraw tokens from the Axionvera vault.</div>
 
       <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="mt-5 space-y-4">
         <FormInput
@@ -49,7 +51,7 @@ export default function WithdrawForm({ isConnected, isSubmitting, onWithdraw }: 
           type="submit"
           disabled={!isConnected || shouldDisableSubmit() || isSubmitting}
           aria-label={isSubmitting ? "Submitting withdrawal" : "Withdraw tokens"}
-          className="w-full rounded-xl border border-slate-800 bg-slate-900/30 px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-900/60 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-border-primary bg-background-secondary/30 px-4 py-3 text-sm font-medium text-text-primary transition hover:bg-background-secondary/60 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Submitting..." : "Withdraw"}
         </button>
