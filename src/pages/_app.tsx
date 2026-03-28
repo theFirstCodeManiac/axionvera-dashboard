@@ -4,17 +4,22 @@ import { Toaster } from 'sonner';
 import "@/styles/globals.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { WalletProvider } from "@/contexts/WalletContext";
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <ErrorBoundary>
-      <Component {...pageProps} />
-      <Toaster 
-        position="top-right"
-        richColors 
-        closeButton 
-        duration={4000}
-      />
+      <ThemeProvider>
+        <WalletProvider>
+          <Component {...pageProps} />
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            duration={4000}
+          />
+        </WalletProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
