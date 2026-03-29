@@ -7,7 +7,14 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { WalletProvider } from "@/contexts/WalletContext";
 import ThemeToggle from "@/components/ThemeToggle";
 
+import { useEffect } from "react";
+import { initTelemetry } from "@/utils/telemetry";
+
 export default function App({ Component, pageProps }: AppProps) {
+  useEffect(() => {
+    initTelemetry();
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>

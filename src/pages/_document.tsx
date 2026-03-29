@@ -5,6 +5,7 @@ export default function Document() {
   return (
     <Html lang="en" suppressHydrationWarning>
       <Head>
+        <script src="/env-config.js" />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </Head>
       <body>

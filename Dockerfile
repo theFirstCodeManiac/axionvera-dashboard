@@ -35,9 +35,13 @@ COPY --from=builder /app/.next /usr/share/nginx/html/.next
 COPY --from=builder /app/public /usr/share/nginx/html/public
 COPY --from=deps /app/node_modules /usr/share/nginx/html/node_modules
 COPY --from=builder /app/package.json /usr/share/nginx/html/
-
 # Expose port 80
 EXPOSE 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Make scripts directory and copy env script
+RUN mkdir -p /app/scripts
+COPY scripts/env.sh /app/scripts/env.sh
+RUN chmod +x /app/scripts/env.sh
+
+# Start with script execution then nginx
+CMD ["/bin/sh", "-c", "/app/scripts/env.sh /usr/share/nginx/html/env-config.js && nginx -g 'daemon off;'"]
