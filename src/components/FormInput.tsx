@@ -1,22 +1,20 @@
 import { forwardRef } from 'react';
-import { FormFieldError } from '@/hooks/useFormValidation';
+import { FieldError } from 'react-hook-form';
 
 interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  error?: FormFieldError;
-  touched?: boolean;
+  error?: FieldError | { message?: string };
   helperText?: string;
   children?: React.ReactNode;
 }
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
-  ({ label, error, touched, helperText, children, className = '', ...props }, ref) => {
-    const hasError = error?.hasError && touched;
-    const showError = hasError && error?.message;
-    const { onChange, ...inputProps } = props;
+  ({ label, error, helperText, children, className = '', ...props }, ref) => {
+    const hasError = !!error;
+    const errorMessage = error?.message;
 
     return (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full">
         {label && (
           <label 
             htmlFor={props.id}
@@ -29,25 +27,27 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
           </label>
         )}
         
-        <input
-          ref={ref}
-          className={`
-            w-full rounded-xl border px-4 py-3 text-sm text-text-primary outline-none ring-0 
-            placeholder:text-text-muted transition-colors
-            ${hasError 
-              ? 'border-red-500/70 bg-red-500/5 focus:border-red-500' 
-              : 'border-border-primary bg-background-secondary/30 focus:border-axion-500/70'
-            }
-            ${className}
-          `}
-          {...inputProps}
-          onChange={(event) => onChange?.(event.target.value as never)}
-        />
+        <div className="relative">
+          <input
+            ref={ref}
+            className={`
+              w-full rounded-xl border px-4 py-3 text-sm text-text-primary outline-none ring-0 
+              placeholder:text-text-muted transition-colors
+              ${hasError 
+                ? 'border-red-500/70 bg-red-500/5 focus:border-red-500' 
+                : 'border-border-primary bg-background-secondary/30 focus:border-axion-500/70'
+              }
+              ${className}
+            `}
+            {...props}
+          />
+          {children}
+        </div>
         
         <div className="min-h-[1.25rem]">
-          {showError ? (
-            <p className="text-xs text-red-500 dark:text-red-400">{error.message}</p>
-          ) : helperText && !touched ? (
+          {errorMessage ? (
+            <p className="text-xs text-red-500 dark:text-red-400">{errorMessage}</p>
+          ) : helperText ? (
             <p className="text-xs text-text-muted">{helperText}</p>
           ) : null}
         </div>

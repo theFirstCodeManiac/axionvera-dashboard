@@ -1,5 +1,6 @@
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { FormInput } from './FormInput';
-import { useFormValidation } from '@/hooks/useFormValidation';
 import { profileSchema, ProfileFormData } from '@/utils/validation';
 import { notify } from '@/utils/notifications';
 
@@ -19,27 +20,24 @@ export default function ProfileForm({ initialData, onSubmit }: ProfileFormProps)
   };
 
   const {
-    getFieldProps,
-    shouldDisableSubmit,
-    isSubmitting,
+    register,
     handleSubmit,
-  } = useFormValidation({
-    schema: profileSchema,
-    initialValues,
-    onSubmit: async (data) => {
-      if (onSubmit) {
-        await onSubmit(data);
-        notify.success("Profile Updated", "Your profile information has been saved successfully.");
-      }
-    },
+    watch,
+    formState: { errors, isDirty, isValid, isSubmitting }
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    mode: 'onChange',
+    defaultValues: initialValues,
   });
 
-  const firstNameProps = getFieldProps('firstName');
-  const lastNameProps = getFieldProps('lastName');
-  const emailProps = getFieldProps('email');
-  const bioProps = getFieldProps('bio');
-  const websiteProps = getFieldProps('website');
-  const locationProps = getFieldProps('location');
+  const bioValue = watch('bio') || '';
+
+  const handleFormSubmit = async (data: ProfileFormData) => {
+    if (onSubmit) {
+      await onSubmit(data);
+      notify.success("Profile Updated", "Your profile information has been saved successfully.");
+    }
+  };
 
   return (
     <div className="rounded-2xl border border-border-primary bg-background-primary/30 p-6">
@@ -50,29 +48,32 @@ export default function ProfileForm({ initialData, onSubmit }: ProfileFormProps)
         </p>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
           <FormInput
-            {...firstNameProps}
+            {...register('firstName')}
             id="firstName"
             label="First Name"
             required
+            error={errors.firstName}
           />
           
           <FormInput
-            {...lastNameProps}
+            {...register('lastName')}
             id="lastName"
             label="Last Name"
             required
+            error={errors.lastName}
           />
         </div>
 
         <FormInput
-          {...emailProps}
+          {...register('email')}
           id="email"
           type="email"
           label="Email Address"
           required
+          error={errors.email}
           helperText="We'll never share your email with anyone else."
         />
 
@@ -82,14 +83,12 @@ export default function ProfileForm({ initialData, onSubmit }: ProfileFormProps)
           </label>
           <textarea
             id="bio"
-            value={bioProps.value}
-            onChange={(e) => bioProps.onChange(e.target.value)}
-            onBlur={bioProps.onBlur}
+            {...register('bio')}
             rows={4}
             className={`
               w-full rounded-xl border px-4 py-3 text-sm text-text-primary outline-none ring-0 
               placeholder:text-slate-500 transition-colors resize-none
-              ${bioProps.error?.hasError && bioProps.touched
+              ${errors.bio
                 ? 'border-red-500/70 bg-red-500/5 focus:border-red-500' 
                 : 'border-border-primary bg-background-secondary/30 focus:border-axion-500/70'
               }
@@ -98,32 +97,34 @@ export default function ProfileForm({ initialData, onSubmit }: ProfileFormProps)
             maxLength={500}
           />
           <div className="mt-1 flex justify-between">
-            {bioProps.error?.hasError && bioProps.touched ? (
-              <p className="text-xs text-red-500 dark:text-red-400">{bioProps.error.message}</p>
+            {errors.bio ? (
+              <p className="text-xs text-red-500 dark:text-red-400">{errors.bio.message}</p>
             ) : (
               <p className="text-xs text-slate-400 dark:text-slate-500 transition-colors">Optional: Brief description about yourself</p>
             )}
             <p className="text-xs text-slate-500">
-              {(bioProps.value || '').length}/500
+              {bioValue.length}/500
             </p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <FormInput
-            {...websiteProps}
+            {...register('website')}
             id="website"
             type="url"
             label="Website"
             placeholder="https://example.com"
+            error={errors.website}
             helperText="Optional: Your personal or professional website"
           />
           
           <FormInput
-            {...locationProps}
+            {...register('location')}
             id="location"
             label="Location"
             placeholder="City, Country"
+            error={errors.location}
             helperText="Optional: Your current location"
           />
         </div>
@@ -138,7 +139,7 @@ export default function ProfileForm({ initialData, onSubmit }: ProfileFormProps)
           </button>
           <button
             type="submit"
-            disabled={shouldDisableSubmit()}
+            disabled={!isDirty || !isValid || isSubmitting}
             className="rounded-xl bg-axion-500 px-6 py-2 text-sm font-medium text-white shadow-lg shadow-axion-500/20 transition hover:bg-axion-400 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSubmitting ? 'Saving...' : 'Save Changes'}
