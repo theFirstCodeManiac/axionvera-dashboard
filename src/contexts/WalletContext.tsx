@@ -177,12 +177,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       if (typeof window === 'undefined') throw new Error('Wallet is only available in the browser.');
       
+      let address = '';
+      let mappedNetwork: StellarNetwork = 'testnet';
+
       if (walletType === 'freighter') {
         const freighter = await loadFreighter();
         const connected = await freighter.isConnected();
         if (!connected) throw new Error('Freighter wallet not detected. Please install the Freighter extension.');
         await freighter.setAllowed();
-        const address = await freighter.getPublicKey();
+        address = await freighter.getPublicKey();
         const network = await freighter.getNetwork();
         
         const networkMap: Record<string, StellarNetwork> = {
@@ -191,20 +194,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           'FUTURENET': 'futurenet'
         };
         
-        const mappedNetwork = networkMap[network] ?? 'testnet';
-        
-        setState({ address, network: mappedNetwork, balance: null, isConnecting: false, error: null, walletType: 'freighter' });
+        mappedNetwork = networkMap[network] ?? 'testnet';
       } else if (walletType === 'albedo') {
         const albedo = await loadAlbedo();
         const result = await albedo.publicKey({});
-        const address = result.pubkey;
-        
-        // Albedo doesn't provide network info, use configured network
-        setState({ address, network: NETWORK, balance: null, isConnecting: false, error: null, walletType: 'albedo' });
+        address = result.pubkey;
+        mappedNetwork = NETWORK;
       }
+
+      setState({ address, network: mappedNetwork, balance: null, isConnecting: false, error: null, walletType });
+      notify.success('Wallet Connected', `Successfully connected to ${walletType} wallet.`);
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to connect wallet.';
       setState((s) => ({ ...s, isConnecting: false, address: null, error: message, walletType: null }));
+      notify.error('Connection Failed', message);
     }
   }, []);
 
@@ -214,6 +217,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       pollingRef.current = null;
     }
     setState((s) => ({ ...s, address: null, balance: null, error: null, walletType: null }));
+    notify.info('Wallet Disconnected', 'Your wallet has been disconnected.');
   }, []);
 
   const value = useMemo<WalletContextType>(
