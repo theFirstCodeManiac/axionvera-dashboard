@@ -6,7 +6,7 @@ import ProfileForm from "@/components/ProfileForm";
 import SecuritySettingsForm from "@/components/SecuritySettingsForm";
 import { UserProfileSkeleton } from "@/components/Skeletons";
 import { useSidebar } from "@/hooks/useSidebar";
-import { useWallet } from "@/hooks/useWallet";
+import { useWalletContext } from "@/hooks/useWallet";
 import { ProfileFormData, SecuritySettingsFormData } from "@/utils/validation";
 import { useEffect } from "react";
 
@@ -14,7 +14,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   const [isLoading, setIsLoading] = useState(true);
   const { isOpen } = useSidebar();
-  const wallet = useWallet();
+  const wallet = useWalletContext();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1500);
@@ -42,7 +42,7 @@ export default function ProfilePage() {
       </Head>
       <main className="min-h-screen bg-background-primary">
         <Navbar
-          address={wallet.address}
+          publicKey={wallet.publicKey}
           isConnecting={wallet.isConnecting}
           onConnect={wallet.connect}
           onDisconnect={wallet.disconnect}
