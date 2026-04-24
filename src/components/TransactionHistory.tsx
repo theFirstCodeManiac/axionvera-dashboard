@@ -86,12 +86,14 @@ export default function TransactionHistory({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-xs text-text-muted">
-          Type
+        <div className="flex items-center gap-2">
+          <label htmlFor="type-filter" className="text-xs text-text-muted">Type</label>
           <select
+            id="type-filter"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
             className={selectClassName}
+            aria-label="Filter transactions by type"
           >
             {TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -99,13 +101,15 @@ export default function TransactionHistory({
               </option>
             ))}
           </select>
-        </label>
-        <label className="flex items-center gap-2 text-xs text-text-muted">
-          Status
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="status-filter" className="text-xs text-text-muted">Status</label>
           <select
+            id="status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
             className={selectClassName}
+            aria-label="Filter transactions by status"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -113,7 +117,7 @@ export default function TransactionHistory({
               </option>
             ))}
           </select>
-        </label>
+        </div>
         {hasActiveFilter ? (
           <button
             type="button"
@@ -121,37 +125,41 @@ export default function TransactionHistory({
               setTypeFilter("all");
               setStatusFilter("all");
             }}
-            className="text-xs text-axion-400 transition hover:text-axion-300"
+            aria-label="Clear all transaction filters"
+            className="text-xs text-axion-400 transition hover:text-axion-300 focus:outline-none focus:underline"
           >
             Clear filters
           </button>
         ) : null}
       </div>
 
-      <div className="mt-5 overflow-hidden rounded-2xl border border-border-primary">
-        <div className="grid grid-cols-[1.2fr_1fr_1fr_0.9fr] gap-3 bg-background-secondary/20 px-4 py-3 text-xs text-text-secondary">
-          <div>Type</div>
-          <div>Amount</div>
-          <div>Created</div>
-          <div>Status</div>
+      <div className="mt-5 overflow-hidden rounded-2xl border border-border-primary" role="table" aria-label="Transaction History">
+        <div className="grid grid-cols-[1.2fr_1fr_1fr_0.9fr] gap-3 bg-background-secondary/20 px-4 py-3 text-xs text-text-secondary font-semibold" role="row">
+          <div role="columnheader">Type</div>
+          <div role="columnheader">Amount</div>
+          <div role="columnheader">Created</div>
+          <div role="columnheader">Status</div>
         </div>
-        <div className="divide-y divide-border-primary">
+        <div className="divide-y divide-border-primary" role="rowgroup">
           {isLoading ? (
             <TransactionSkeleton />
           ) : filteredTransactions.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-text-secondary">
-              {hasActiveFilter ? "No transactions match the selected filters." : "No transactions yet."}
+            <div className="px-4 py-6 text-sm text-text-secondary" role="row">
+              <div role="cell" className="col-span-4">
+                {hasActiveFilter ? "No transactions match the selected filters." : "No transactions yet."}
+              </div>
             </div>
           ) : (
             filteredTransactions.map((tx) => (
               <div
                 key={tx.id}
                 className="grid grid-cols-[1.2fr_1fr_1fr_0.9fr] items-center gap-3 px-4 py-3 text-sm"
+                role="row"
               >
-                <div className="text-text-primary">{typeLabel(tx.type)}</div>
-                <div className="text-text-primary">{formatAmount(tx.amount)}</div>
-                <div className="text-text-muted">{new Date(tx.createdAt).toLocaleString()}</div>
-                <div>
+                <div className="text-text-primary" role="cell">{typeLabel(tx.type)}</div>
+                <div className="text-text-primary" role="cell">{formatAmount(tx.amount)}</div>
+                <div className="text-text-muted" role="cell">{new Date(tx.createdAt).toLocaleString()}</div>
+                <div role="cell">
                   <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusStyles(tx.status)}`}>
                     {tx.status}
                   </span>

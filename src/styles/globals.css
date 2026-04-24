@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import './theme.css';
+@import "./theme.css";
 
 html,
 body {
