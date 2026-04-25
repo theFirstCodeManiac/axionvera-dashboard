@@ -25,6 +25,7 @@ const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "claim", label: "Claim" }
 ];
 
+
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All Statuses" },
   { value: "success", label: "Success" },
