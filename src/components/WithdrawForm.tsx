@@ -28,6 +28,7 @@ export default function WithdrawForm({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isValid, isDirty }
   } = useForm<WithdrawFormData>({
     resolver: zodResolver(createWithdrawSchema(parseFloat(balance))),
@@ -36,6 +37,14 @@ export default function WithdrawForm({
       amount: '' as any,
     }
   });
+
+  const numericBalance = parseFloat(balance);
+
+  function handleMax() {
+    if (numericBalance > 0) {
+      setValue('amount', numericBalance as any, { shouldValidate: true, shouldDirty: true });
+    }
+  }
 
   const onSubmit = async (data: WithdrawFormData) => {
     try {
@@ -53,11 +62,22 @@ export default function WithdrawForm({
     <section className="rounded-2xl border border-border-primary bg-background-primary/30 p-6">
       <div className="text-sm font-semibold text-text-primary">Withdraw</div>
       <div className="mt-1 text-xs text-text-muted">Withdraw tokens from the Axionvera vault.</div>
-      <div className="mt-3 rounded-xl border border-border-primary bg-background-secondary/20 px-4 py-3 text-xs text-text-secondary">
-        Available balance: <span className="font-medium text-text-primary">{formatAmount(balance)}</span>
-      </div>
-
       <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
+        <div className="flex items-center justify-between text-xs text-text-muted">
+          <span>Available Balance</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-text-primary">{formatAmount(balance)}</span>
+            <button
+              type="button"
+              onClick={handleMax}
+              disabled={!isConnected || numericBalance <= 0}
+              className="rounded-md bg-axion-500/10 px-2 py-0.5 text-xs font-semibold text-axion-400 transition hover:bg-axion-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Max
+            </button>
+          </div>
+        </div>
+
         <FormInput
           {...register('amount')}
           id="withdraw-amount"
