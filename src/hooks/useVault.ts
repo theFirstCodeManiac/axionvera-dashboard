@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/utils/notifications";
 
 import {
@@ -117,20 +118,12 @@ function updateActionState(
 
 export function useVault({ walletAddress, sdk: providedSdk }: UseVaultArgs) {
   const sdk = useMemo(() => providedSdk ?? createAxionveraVaultSdk(), [providedSdk]);
+  const queryClient = useQueryClient();
   const [state, setState] = useState<VaultState>(INITIAL_STATE);
 
-  const refresh = useCallback(async () => {
-    if (!walletAddress) {
-      setState((current) => resetDisconnectedVaultState(current));
-      return;
-    }
-
-    setState((current) => ({ ...current, isLoading: true, error: null }));
-    try {
-      const [balances, transactions] = await Promise.all([
-        sdk.getBalances({ walletAddress, network: NETWORK }),
-        sdk.getTransactions({ walletAddress, network: NETWORK })
-      ]);
+  // Use React Query hooks for data fetching
+  const balancesQuery = useVaultBalances(walletAddress);
+  const transactionsQuery = useTransactionHistory(walletAddress);
 
       setState((current) => ({
         ...current,
@@ -146,9 +139,12 @@ export function useVault({ walletAddress, sdk: providedSdk }: UseVaultArgs) {
     }
   }, [sdk, walletAddress]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const refresh = useCallback(async () => {
+    await Promise.all([
+      balancesQuery.refetch(),
+      transactionsQuery.refetch()
+    ]);
+  }, [balancesQuery, transactionsQuery]);
 
   const setValidationError = useCallback((type: VaultActionType, message: string, amount?: string) => {
     setState((current) => {
@@ -250,10 +246,16 @@ export function useVault({ walletAddress, sdk: providedSdk }: UseVaultArgs) {
 
   const deposit = useCallback(
     async (amountInput: string) =>
-      runAmountAction("deposit", amountInput, (amount) =>
-        sdk.deposit({ walletAddress: walletAddress as string, network: NETWORK, amount })
-      ),
-    [runAmountAction, sdk, walletAddress]
+      runAmountAction("deposit", amountInput, async (amount) => {
+        const result = await sdk.deposit({ walletAddress: walletAddress as string, network: NETWORK, amount });
+        // Invalidate queries to force refresh
+        await Promise.all([
+          balancesQuery.invalidate(),
+          transactionsQuery.invalidate()
+        ]);
+        return result;
+      }),
+    [runAmountAction, sdk, walletAddress, balancesQuery, transactionsQuery]
   );
 
   const withdraw = useCallback(
@@ -261,13 +263,21 @@ export function useVault({ walletAddress, sdk: providedSdk }: UseVaultArgs) {
       runAmountAction(
         "withdraw",
         amountInput,
-        (amount) => sdk.withdraw({ walletAddress: walletAddress as string, network: NETWORK, amount }),
+        async (amount) => {
+          const result = await sdk.withdraw({ walletAddress: walletAddress as string, network: NETWORK, amount });
+          // Invalidate queries to force refresh
+          await Promise.all([
+            balancesQuery.invalidate(),
+            transactionsQuery.invalidate()
+          ]);
+          return result;
+        },
         (amount) =>
-          Number(amount) > Number(state.balance)
+          Number(amount) > Number(balancesQuery.data?.balance ?? "0")
             ? "Withdrawal amount exceeds your available vault balance."
             : null
       ),
-    [runAmountAction, sdk, state.balance, walletAddress]
+    [runAmountAction, sdk, walletAddress, balancesQuery, transactionsQuery]
   );
 
   const claimRewards = useCallback(async () => {
@@ -279,7 +289,11 @@ export function useVault({ walletAddress, sdk: providedSdk }: UseVaultArgs) {
     setState((current) => ({ ...current, isClaiming: true, error: null }));
     try {
       await sdk.claimRewards({ walletAddress, network: NETWORK });
-      await refresh();
+      // Invalidate both queries to force refresh
+      await Promise.all([
+        balancesQuery.invalidate(),
+        transactionsQuery.invalidate()
+      ]);
       notify.success("Rewards Claimed", "Successfully claimed your vault rewards.");
     } catch (error) {
       const message = getErrorMessage(error, "Claim failed.");
@@ -288,16 +302,16 @@ export function useVault({ walletAddress, sdk: providedSdk }: UseVaultArgs) {
     } finally {
       setState((current) => ({ ...current, isClaiming: false }));
     }
-  }, [refresh, sdk, walletAddress]);
+  }, [balancesQuery, transactionsQuery, sdk, walletAddress]);
 
   return {
-    balance: state.balance,
-    rewards: state.rewards,
-    transactions: state.transactions,
-    isLoading: state.isLoading,
+    balance: balancesQuery.data?.balance ?? "0",
+    rewards: balancesQuery.data?.rewards ?? "0",
+    transactions: transactionsQuery.data ?? [],
+    isLoading,
     isSubmitting: state.isSubmitting,
     isClaiming: state.isClaiming,
-    error: state.error,
+    error,
     depositStatus: state.actions.deposit.status,
     depositHash: state.actions.deposit.hash,
     lastDepositAmount: state.actions.deposit.lastAmount,
