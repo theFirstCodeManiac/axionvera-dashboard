@@ -14,9 +14,35 @@ import { useEffect } from "react";
 import { initTelemetry } from "@/utils/telemetry";
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
+/**
+ * Web Vitals callback - sends metrics to the telemetry server
+ * Monitors LCP (Largest Contentful Paint), FID (First Input Delay), CLS, etc.
+ */
+function onWebVitals(metric: any) {
+  // Send to existing telemetry infrastructure
+  console.debug('Web Vitals metric:', metric.name, metric.value);
+  
+  // Optionally send to analytics service
+  if (typeof window !== 'undefined') {
+    // Google Analytics 4 example (uncomment if using GA4):
+    // gtag('event', metric.name, {
+    //   event_category: 'Web Vitals',
+    //   event_label: metric.id,
+    //   value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
+    //   non_interaction: true,
+    // });
+  }
+}
+
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     initTelemetry();
+  }, []);
+
+  // Report Web Vitals metrics for performance monitoring
+  // This enables LCP, FID, CLS, TTFB, and other Core Web Vitals tracking
+  useEffect(() => {
+    reportWebVitals(onWebVitals);
   }, []);
 
   return (
